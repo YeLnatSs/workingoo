@@ -4,6 +4,7 @@ import { mapState, mapGetters } from 'vuex'
 import { date } from 'quasar'
 
 import EventBus from 'src/utils/event-bus'
+import { isValidDateString } from 'src/utils/time'
 import { extractLocationDataFromPlace } from 'src/utils/places'
 import logger from 'src/utils/logger'
 
@@ -121,6 +122,41 @@ export default {
 
       const timeUnit = get(this.selectedAssetType, 'timing.timeUnit')
       return this.$t({ id: 'pricing.price_per_time_unit_label' }, { timeUnit })
+    },
+    step () {
+      const steps = [
+        true, // fictive step 0
+        true,
+        false,
+        false,
+        false,
+      ]
+
+      if (this.name.length >= 1) { // with high debounce to reduce distraction while typing
+        steps[2] = true
+      }
+
+      const validCategory = this.selectedCategory && this.selectedCategory.name
+      if ((!this.categoryRequired || validCategory) && !isNaN(parseInt(this.price))) {
+        steps[3] = true
+      }
+
+      let isValidStartDate = true
+      let isValidEndDate = true
+      if (this.startDate) {
+        isValidStartDate = isValidDateString(this.startDate)
+      }
+      if (this.endDate) {
+        isValidEndDate = isValidDateString(this.endDate)
+      }
+
+      if (!this.showAvailabilityDates || (this.showAvailabilityDates && this.startDate && isValidStartDate && isValidEndDate)) {
+        // endDate is optional, so is quantity
+        steps[4] = true
+      }
+
+      // Index of first falsy step
+      return steps.indexOf(false) >= 0 ? steps.indexOf(false) - 1 : steps.length - 1
     },
     reusableImages () {
       return this.currentUser.id ? this.currentUser.images : []
@@ -501,8 +537,8 @@ export default {
           <div
             class="step-2 q-py-lg"
           >
-            <div v-if="showCategory" class="row justify-around">
-              <div class="flex-item--grow-shrink-auto q-pr-lg col-md-6 col-12">
+            <div class="row justify-around">
+              <div v-if="showCategory" class="flex-item--grow-shrink-auto q-pr-lg col-md-6 col-12">
                 <SelectCategories
                   :initial-category="selectedCategory"
                   :label="$t({ id: 'asset.category_label' })"
